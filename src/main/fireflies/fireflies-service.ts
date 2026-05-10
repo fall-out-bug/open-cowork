@@ -9,7 +9,7 @@
  * - Import transcripts as sessions
  */
 import type { DatabaseInstance } from '../db/database';
-import type { FirefliesConfig, FirefliesTranscript } from '../../renderer/types';
+import type { FirefliesConfig, FirefliesTranscript, ServerEvent } from '../../renderer/types';
 import { log, logError } from '../utils/logger';
 
 const FIREFLIES_API_URL = 'https://api.fireflies.ai/graphql';
@@ -46,9 +46,9 @@ const TRANSCRIPTS_QUERY = `
 
 export class FirefliesService {
   private db: DatabaseInstance;
-  private sendToRenderer: (event: unknown) => void;
+  private sendToRenderer: (event: ServerEvent) => void;
 
-  constructor(db: DatabaseInstance, sendToRenderer: (event: unknown) => void) {
+  constructor(db: DatabaseInstance, sendToRenderer: (event: ServerEvent) => void) {
     this.db = db;
     this.sendToRenderer = sendToRenderer;
     log('[FirefliesService] Initialized');

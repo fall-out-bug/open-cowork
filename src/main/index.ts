@@ -2717,12 +2717,6 @@ async function handleClientEvent(event: ClientEvent): Promise<unknown> {
       return { success: true };
     }
 
-    case 'fireflies.clearTranscripts': {
-      if (!firefliesService) throw new Error('Fireflies service not initialized');
-      firefliesService.clearTranscripts();
-      return { success: true };
-    }
-
     default:
       logWarn('Unknown event type:', event);
       return null;

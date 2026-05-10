@@ -268,9 +268,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   removeSession: (sessionId) =>
     set((state) => {
-      const { [sessionId]: _, ...restMessages } = state.messagesBySession;
-      const { [sessionId]: __partials, ...restPartials } = state.partialMessagesBySession;
-      const { [sessionId]: __thinkingPartials, ...restThinkingPartials } =
+      const { [sessionId]: _removedMessages, ...restMessages } = state.messagesBySession;
+      const { [sessionId]: _removedPartials, ...restPartials } = state.partialMessagesBySession;
+      const { [sessionId]: _removedThinking, ...restThinkingPartials } =
         state.partialThinkingBySession;
       const { [sessionId]: __pending, ...restPendingTurns } = state.pendingTurnsBySession;
       const { [sessionId]: __active, ...restActiveTurns } = state.activeTurnsBySession;

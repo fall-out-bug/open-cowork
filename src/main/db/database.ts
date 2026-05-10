@@ -767,7 +767,7 @@ export function initDatabase(): DatabaseInstance {
     },
 
     firefliesConfig: {
-      create: (config: FirefliesConfigRow) => {
+      save: (config: FirefliesConfigRow) => {
         insertFirefliesConfig.run(config.id, config.api_key, config.connected, config.last_synced_at);
       },
 

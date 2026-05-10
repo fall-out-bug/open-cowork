@@ -334,7 +334,8 @@ export type ClientEvent =
   | { type: 'fireflies.disconnect'; payload: Record<string, never> }
   | { type: 'fireflies.fetchTranscripts'; payload: { apiKey: string; limit?: number; skip?: number } }
   | { type: 'fireflies.importTranscript'; payload: { transcriptId: string } }
-  | { type: 'fireflies.deleteTranscript'; payload: { transcriptId: string } };
+  | { type: 'fireflies.deleteTranscript'; payload: { transcriptId: string } }
+  | { type: 'fireflies.clearTranscripts'; payload: Record<string, never> };
 
 // Sandbox setup types (app startup)
 export type SandboxSetupPhase =
