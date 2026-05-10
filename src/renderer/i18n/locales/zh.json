@@ -611,7 +611,10 @@
     "nSelected": "已选 {{count}} 个",
     "batchDeleteConfirm": "删除 {{count}} 个对话？此操作无法撤销。",
     "cancel": "取消",
-    "confirmDelete": "删除"
+    "confirmDelete": "删除",
+    "sessions": "会话",
+    "projects": "项目",
+    "fireflies": "Fireflies"
   },
   "chat": {
     "sendMessage": "发送消息",

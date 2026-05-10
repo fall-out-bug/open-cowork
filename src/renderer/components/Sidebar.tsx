@@ -14,8 +14,12 @@ import {
   Plus,
   ListChecks,
   Check,
+  FolderKanban,
+  Mic,
 } from 'lucide-react';
 import type { Session } from '../types';
+import { ProjectManager } from './projects/ProjectManager';
+import { FirefliesPanel } from './fireflies/FirefliesPanel';
 
 const sidebarLogoSrc = new URL('../../../resources/logo.png', import.meta.url).href;
 
@@ -50,6 +54,7 @@ export function Sidebar({ width = 280 }: SidebarProps) {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activePanel, setActivePanel] = useState<'sessions' | 'projects' | 'fireflies'>('sessions');
 
   const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
   const filteredSessions = useMemo(() => {
@@ -293,120 +298,168 @@ export function Sidebar({ width = 280 }: SidebarProps) {
           </button>
         </div>
 
-        <button
-          onClick={handleNewSession}
-          className="mt-3 w-full flex items-center gap-2 rounded-xl bg-background/60 px-3 py-2 text-left text-text-primary hover:bg-surface-hover transition-colors"
-        >
-          <Plus className="w-4 h-4 text-text-secondary flex-shrink-0" />
-          <span className="text-[13px] font-medium">{t('sidebar.newTask')}</span>
-        </button>
+        {/* Panel tabs */}
+        <div className="mt-3 flex items-center gap-1 rounded-xl bg-background/60 p-1">
+          <button
+            onClick={() => setActivePanel('sessions')}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+              activePanel === 'sessions'
+                ? 'bg-surface text-text-primary'
+                : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            <ListChecks className="w-3.5 h-3.5" />
+            {t('sidebar.sessions')}
+          </button>
+          <button
+            onClick={() => setActivePanel('projects')}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+              activePanel === 'projects'
+                ? 'bg-surface text-text-primary'
+                : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            <FolderKanban className="w-3.5 h-3.5" />
+            {t('sidebar.projects')}
+          </button>
+          <button
+            onClick={() => setActivePanel('fireflies')}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+              activePanel === 'fireflies'
+                ? 'bg-surface text-text-primary'
+                : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            <Mic className="w-3.5 h-3.5" />
+            {t('sidebar.fireflies')}
+          </button>
+        </div>
 
-        {sessions.length > 0 && (
-          <div className="mt-2 flex items-center gap-2">
-            <div className="relative flex-1 min-w-0">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('sidebar.search')}
-                className="w-full rounded-xl border border-transparent bg-background/50 pl-9 pr-3 py-2 text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border focus:bg-background transition-colors"
-              />
-            </div>
+        {activePanel === 'sessions' && (
+          <>
             <button
-              onClick={() => {
-                if (isSelectMode) {
-                  exitSelectMode();
-                } else {
-                  setIsSelectMode(true);
-                }
-              }}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
-                isSelectMode
-                  ? 'bg-accent text-white'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-              }`}
-              title={t('sidebar.manage')}
+              onClick={handleNewSession}
+              className="mt-3 w-full flex items-center gap-2 rounded-xl bg-background/60 px-3 py-2 text-left text-text-primary hover:bg-surface-hover transition-colors"
             >
-              <ListChecks className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4 text-text-secondary flex-shrink-0" />
+              <span className="text-[13px] font-medium">{t('sidebar.newTask')}</span>
             </button>
-          </div>
+
+            {sessions.length > 0 && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('sidebar.search')}
+                    className="w-full rounded-xl border border-transparent bg-background/50 pl-9 pr-3 py-2 text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border focus:bg-background transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (isSelectMode) {
+                      exitSelectMode();
+                    } else {
+                      setIsSelectMode(true);
+                    }
+                  }}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                    isSelectMode
+                      ? 'bg-accent text-white'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+                  }`}
+                  title={t('sidebar.manage')}
+                >
+                  <ListChecks className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-4">
-        {groupedSessions.length === 0 ? (
-          <div className="px-3 py-6">
-            <p className="text-sm text-text-secondary">{t('sidebar.noTasks')}</p>
-            <p className="mt-1 text-xs leading-5 text-text-muted">{t('sidebar.noTasksHint')}</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {groupedSessions.map((group) => (
-              <section key={group.key}>
-                <div className="px-3 pb-2 text-[11px] font-medium tracking-[0.04em] text-text-muted">
-                  {group.label}
-                </div>
-                <div className="space-y-0.5">
-                  {group.sessions.map((session) => {
-                    const isActive = activeSessionId === session.id;
-                    const isSelected = selectedIds.has(session.id);
-                    return (
-                      <div
-                        key={session.id}
-                        onClick={() => {
-                          if (isSelectMode) {
-                            toggleSelectSession(session.id);
-                          } else {
-                            handleSessionClick(session.id);
-                          }
-                        }}
-                        onMouseEnter={() => setHoveredSession(session.id)}
-                        onMouseLeave={() => setHoveredSession(null)}
-                        className={`group relative cursor-pointer rounded-lg px-2.5 py-1.5 transition-colors ${
-                          isSelectMode && isSelected
-                            ? 'bg-accent-muted/20'
-                            : isActive && !isSelectMode
-                              ? 'bg-surface-hover/80'
-                              : 'hover:bg-surface-hover/60'
-                        }`}
-                      >
-                        <div className={`flex items-center gap-2 ${!isSelectMode ? 'pr-6' : ''}`}>
-                          {isSelectMode && (
-                            <div
-                              className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                                isSelected
-                                  ? 'bg-accent text-white'
-                                  : 'border border-border-muted bg-background'
-                              }`}
-                            >
-                              {isSelected && <Check className="w-2.5 h-2.5" />}
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[13px] font-medium leading-5 text-text-primary truncate">
-                              {session.title}
-                            </div>
-                          </div>
-                        </div>
-
-                        {!isSelectMode && hoveredSession === session.id && (
-                          <button
-                            onClick={(e) => handleDeleteSession(e, session.id)}
-                            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-surface-active transition-colors"
-                            title={t('common.delete')}
+        {activePanel === 'sessions' && (
+          <>
+            {groupedSessions.length === 0 ? (
+              <div className="px-3 py-6">
+                <p className="text-sm text-text-secondary">{t('sidebar.noTasks')}</p>
+                <p className="mt-1 text-xs leading-5 text-text-muted">{t('sidebar.noTasksHint')}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {groupedSessions.map((group) => (
+                  <section key={group.key}>
+                    <div className="px-3 pb-2 text-[11px] font-medium tracking-[0.04em] text-text-muted">
+                      {group.label}
+                    </div>
+                    <div className="space-y-0.5">
+                      {group.sessions.map((session) => {
+                        const isActive = activeSessionId === session.id;
+                        const isSelected = selectedIds.has(session.id);
+                        return (
+                          <div
+                            key={session.id}
+                            onClick={() => {
+                              if (isSelectMode) {
+                                toggleSelectSession(session.id);
+                              } else {
+                                handleSessionClick(session.id);
+                              }
+                            }}
+                            onMouseEnter={() => setHoveredSession(session.id)}
+                            onMouseLeave={() => setHoveredSession(null)}
+                            className={`group relative cursor-pointer rounded-lg px-2.5 py-1.5 transition-colors ${
+                              isSelectMode && isSelected
+                                ? 'bg-accent-muted/20'
+                                : isActive && !isSelectMode
+                                  ? 'bg-surface-hover/80'
+                                  : 'hover:bg-surface-hover/60'
+                            }`}
                           >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
+                            <div className={`flex items-center gap-2 ${!isSelectMode ? 'pr-6' : ''}`}>
+                              {isSelectMode && (
+                                <div
+                                  className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                                    isSelected
+                                      ? 'bg-accent text-white'
+                                      : 'border border-border-muted bg-background'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-2.5 h-2.5" />}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="text-[13px] font-medium leading-5 text-text-primary truncate">
+                                  {session.title}
+                                </div>
+                              </div>
+                            </div>
+
+                            {!isSelectMode && hoveredSession === session.id && (
+                              <button
+                                onClick={(e) => handleDeleteSession(e, session.id)}
+                                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-surface-active transition-colors"
+                                title={t('common.delete')}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+          </>
         )}
+
+        {activePanel === 'projects' && <ProjectManager />}
+        {activePanel === 'fireflies' && <FirefliesPanel />}
       </div>
 
       {isSelectMode ? (
