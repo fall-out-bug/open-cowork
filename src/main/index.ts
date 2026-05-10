@@ -19,6 +19,7 @@ import { execFileSync } from 'child_process';
 import { config } from 'dotenv';
 import { initDatabase } from './db/database';
 import { SessionManager } from './session/session-manager';
+import { FirefliesService } from './fireflies/fireflies-service';
 import { SkillsManager } from './skills/skills-manager';
 import { PluginCatalogService } from './skills/plugin-catalog-service';
 import { PluginRuntimeService } from './skills/plugin-runtime-service';
@@ -108,6 +109,7 @@ app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | null = null;
 let sessionManager: SessionManager | null = null;
+let firefliesService: FirefliesService | null = null;
 let skillsManager: SkillsManager | null = null;
 let pluginRuntimeService: PluginRuntimeService | null = null;
 let scheduledTaskManager: ScheduledTaskManager | null = null;
@@ -794,6 +796,7 @@ app
     // Initialize session manager before creating an interactive window.
     // This avoids session.start racing the startup path and hitting a null manager.
     sessionManager = new SessionManager(db, sendToRenderer, pluginRuntimeService);
+    firefliesService = new FirefliesService(db, sendToRenderer);
     skillsManager = new SkillsManager(db, {
       getConfiguredGlobalSkillsPath: () => configStore.get('globalSkillsPath') || '',
       setConfiguredGlobalSkillsPath: (nextPath: string) => {
@@ -2669,6 +2672,56 @@ async function handleClientEvent(event: ClientEvent): Promise<unknown> {
         });
       }
       return null;
+
+    case 'fireflies.connect': {
+      if (!firefliesService) throw new Error('Fireflies service not initialized');
+      const success = await firefliesService.testConnection(event.payload.apiKey);
+      if (success) {
+        firefliesService.saveConfig(event.payload.apiKey, true);
+      }
+      return { success };
+    }
+
+    case 'fireflies.disconnect': {
+      if (!firefliesService) throw new Error('Fireflies service not initialized');
+      firefliesService.deleteConfig();
+      return { success: true };
+    }
+
+    case 'fireflies.fetchTranscripts': {
+      if (!firefliesService) throw new Error('Fireflies service not initialized');
+      return firefliesService.fetchTranscripts(
+        event.payload.apiKey,
+        event.payload.limit,
+        event.payload.skip
+      );
+    }
+
+    case 'fireflies.importTranscript': {
+      if (!firefliesService || !sessionManager) throw new Error('Services not initialized');
+      const transcript = firefliesService.loadTranscripts().find((t) => t.id === event.payload.transcriptId);
+      if (!transcript) return null;
+      const session = await sessionManager.startSession(
+        `[Fireflies] ${transcript.title}`,
+        `Meeting transcript:\n\n${transcript.transcriptText || transcript.summary || ''}`,
+        undefined,
+        undefined,
+        undefined
+      );
+      return session;
+    }
+
+    case 'fireflies.deleteTranscript': {
+      if (!firefliesService) throw new Error('Fireflies service not initialized');
+      firefliesService.deleteTranscript(event.payload.transcriptId);
+      return { success: true };
+    }
+
+    case 'fireflies.clearTranscripts': {
+      if (!firefliesService) throw new Error('Fireflies service not initialized');
+      firefliesService.clearTranscripts();
+      return { success: true };
+    }
 
     default:
       logWarn('Unknown event type:', event);

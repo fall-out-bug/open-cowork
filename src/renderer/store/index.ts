@@ -10,6 +10,8 @@ import type {
   SandboxSetupProgress,
   SandboxSyncStatus,
   SkillsStorageChangeEvent,
+  FirefliesConfig,
+  FirefliesTranscript,
 } from '../types';
 import { applySessionUpdate } from '../utils/session-update';
 
@@ -91,6 +93,10 @@ interface AppState {
   // System theme (from OS native theme)
   systemDarkMode: boolean;
 
+  // Fireflies
+  firefliesConfig: FirefliesConfig | null;
+  firefliesTranscripts: FirefliesTranscript[];
+
   // Actions
   setSessions: (sessions: Session[]) => void;
   addSession: (session: Session) => void;
@@ -162,6 +168,13 @@ interface AppState {
 
   // System theme actions
   setSystemDarkMode: (dark: boolean) => void;
+
+  // Fireflies actions
+  setFirefliesConfig: (config: FirefliesConfig | null) => void;
+  setFirefliesTranscripts: (transcripts: FirefliesTranscript[]) => void;
+  addFirefliesTranscript: (transcript: FirefliesTranscript) => void;
+  removeFirefliesTranscript: (transcriptId: string) => void;
+  clearFirefliesTranscripts: () => void;
 }
 
 const defaultSettings: Settings = {
@@ -227,6 +240,8 @@ export const useAppStore = create<AppState>((set) => ({
   skillsStorageChangeEvent: null,
   contextWindowBySession: {},
   systemDarkMode: false,
+  firefliesConfig: null,
+  firefliesTranscripts: [],
 
   // Session actions
   setSessions: (sessions) => set({ sessions }),
@@ -664,6 +679,19 @@ export const useAppStore = create<AppState>((set) => ({
 
   // System theme actions
   setSystemDarkMode: (dark) => set({ systemDarkMode: dark }),
+
+  // Fireflies actions
+  setFirefliesConfig: (config) => set({ firefliesConfig: config }),
+  setFirefliesTranscripts: (transcripts) => set({ firefliesTranscripts: transcripts }),
+  addFirefliesTranscript: (transcript) =>
+    set((state) => ({
+      firefliesTranscripts: [transcript, ...state.firefliesTranscripts],
+    })),
+  removeFirefliesTranscript: (transcriptId) =>
+    set((state) => ({
+      firefliesTranscripts: state.firefliesTranscripts.filter((t) => t.id !== transcriptId),
+    })),
+  clearFirefliesTranscripts: () => set({ firefliesTranscripts: [] }),
 }));
 
 // Expose helpers for nav-server (CLI-driven UI navigation via executeJavaScript)

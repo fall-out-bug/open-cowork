@@ -45,7 +45,20 @@ export interface DatabaseInstance {
     getAll: () => ScheduledTaskRow[];
     delete: (id: string) => void;
   };
-  
+
+  firefliesConfig: {
+    save: (config: FirefliesConfigRow) => void;
+    get: () => FirefliesConfigRow | undefined;
+    delete: () => void;
+  };
+
+  firefliesTranscripts: {
+    create: (transcript: FirefliesTranscriptRow) => void;
+    getAll: () => FirefliesTranscriptRow[];
+    delete: (id: string) => void;
+    deleteAll: () => void;
+  };
+
   // For compatibility with old interface
   prepare: (sql: string) => Database.Statement;
   exec: (sql: string) => void;
@@ -109,6 +122,27 @@ export interface ScheduledTaskRow {
   last_error: string | null;
   created_at: number;
   updated_at: number;
+}
+
+export interface FirefliesConfigRow {
+  id: number;
+  api_key: string;
+  connected: number;
+  last_synced_at: number | null;
+}
+
+export interface FirefliesTranscriptRow {
+  id: string;
+  title: string;
+  date: string;
+  duration: number;
+  participants: string;
+  summary: string | null;
+  action_items: string | null;
+  questions: string | null;
+  transcript_text: string | null;
+  source_url: string | null;
+  imported_at: number;
 }
 
 let db: DatabaseInstance | null = null;
@@ -343,7 +377,39 @@ function initializeSchema(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_next_run
     ON scheduled_tasks(enabled, next_run_at)
   `);
-  
+
+  // Fireflies config table
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS fireflies_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      api_key TEXT NOT NULL,
+      connected INTEGER NOT NULL DEFAULT 0,
+      last_synced_at INTEGER
+    )
+  `);
+
+  // Fireflies transcripts table
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS fireflies_transcripts (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL,
+      duration INTEGER NOT NULL DEFAULT 0,
+      participants TEXT NOT NULL DEFAULT '[]',
+      summary TEXT,
+      action_items TEXT,
+      questions TEXT,
+      transcript_text TEXT,
+      source_url TEXT,
+      imported_at INTEGER NOT NULL
+    )
+  `);
+
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_fireflies_transcripts_date
+    ON fireflies_transcripts(date DESC)
+  `);
+
   log('[Database] Schema initialized');
   } catch (error) {
     logError('[Database] Schema initialization failed:', error);
@@ -475,7 +541,38 @@ export function initDatabase(): DatabaseInstance {
   const deleteScheduledTaskStmt = rawDb.prepare(`
     DELETE FROM scheduled_tasks WHERE id = ?
   `);
-  
+
+  const insertFirefliesConfig = rawDb.prepare(`
+    INSERT OR REPLACE INTO fireflies_config (id, api_key, connected, last_synced_at)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const getFirefliesConfigStmt = rawDb.prepare(`
+    SELECT * FROM fireflies_config WHERE id = 1
+  `);
+
+  const deleteFirefliesConfigStmt = rawDb.prepare(`
+    DELETE FROM fireflies_config WHERE id = 1
+  `);
+
+  const insertFirefliesTranscript = rawDb.prepare(`
+    INSERT OR REPLACE INTO fireflies_transcripts
+    (id, title, date, duration, participants, summary, action_items, questions, transcript_text, source_url, imported_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const getAllFirefliesTranscriptsStmt = rawDb.prepare(`
+    SELECT * FROM fireflies_transcripts ORDER BY date DESC
+  `);
+
+  const deleteFirefliesTranscriptStmt = rawDb.prepare(`
+    DELETE FROM fireflies_transcripts WHERE id = ?
+  `);
+
+  const deleteAllFirefliesTranscriptsStmt = rawDb.prepare(`
+    DELETE FROM fireflies_transcripts
+  `);
+
   db = {
     raw: rawDb,
     
@@ -668,7 +765,51 @@ export function initDatabase(): DatabaseInstance {
         deleteScheduledTaskStmt.run(id);
       },
     },
-    
+
+    firefliesConfig: {
+      create: (config: FirefliesConfigRow) => {
+        insertFirefliesConfig.run(config.id, config.api_key, config.connected, config.last_synced_at);
+      },
+
+      get: (): FirefliesConfigRow | undefined => {
+        return getFirefliesConfigStmt.get() as FirefliesConfigRow | undefined;
+      },
+
+      delete: () => {
+        deleteFirefliesConfigStmt.run();
+      },
+    },
+
+    firefliesTranscripts: {
+      create: (transcript: FirefliesTranscriptRow) => {
+        insertFirefliesTranscript.run(
+          transcript.id,
+          transcript.title,
+          transcript.date,
+          transcript.duration,
+          transcript.participants,
+          transcript.summary,
+          transcript.action_items,
+          transcript.questions,
+          transcript.transcript_text,
+          transcript.source_url,
+          transcript.imported_at
+        );
+      },
+
+      getAll: (): FirefliesTranscriptRow[] => {
+        return getAllFirefliesTranscriptsStmt.all() as FirefliesTranscriptRow[];
+      },
+
+      delete: (id: string) => {
+        deleteFirefliesTranscriptStmt.run(id);
+      },
+
+      deleteAll: () => {
+        deleteAllFirefliesTranscriptsStmt.run();
+      },
+    },
+
     // Compatibility layer for old interface
     prepare: (sql: string) => rawDb.prepare(sql),
     exec: (sql: string) => rawDb.exec(sql),

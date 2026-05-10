@@ -858,6 +858,29 @@
   "time": {
     "now": "now"
   },
+  "fireflies": {
+    "title": "Fireflies",
+    "description": "Import meeting transcripts from Fireflies.ai",
+    "connected": "Connected",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "enterApiKey": "Enter Fireflies API key",
+    "apiKeyHint": "Get your API key from Fireflies.ai settings",
+    "fetchTranscripts": "Fetch Transcripts",
+    "searchTranscripts": "Search transcripts...",
+    "noTranscripts": "No transcripts yet. Click fetch to load.",
+    "summary": "Summary",
+    "actionItems": "Action Items",
+    "questions": "Questions",
+    "transcriptContent": "Transcript",
+    "importTranscript": "Import as Session",
+    "importing": "Importing...",
+    "deleteTranscript": "Delete",
+    "clearAll": "Clear All",
+    "date": "Date",
+    "duration": "Duration",
+    "participants": "Participants"
+  },
   "permission": {
     "permissionRequired": "Permission Required",
     "tool": "Tool:",

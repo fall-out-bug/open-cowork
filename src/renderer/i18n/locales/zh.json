@@ -858,6 +858,29 @@
   "time": {
     "now": "刚刚"
   },
+  "fireflies": {
+    "title": "Fireflies",
+    "description": "从 Fireflies.ai 导入会议记录",
+    "connected": "已连接",
+    "connect": "连接",
+    "disconnect": "断开连接",
+    "enterApiKey": "输入 Fireflies API 密钥",
+    "apiKeyHint": "从 Fireflies.ai 设置中获取 API 密钥",
+    "fetchTranscripts": "获取记录",
+    "searchTranscripts": "搜索记录...",
+    "noTranscripts": "暂无记录。点击获取按钮加载。",
+    "summary": "摘要",
+    "actionItems": "行动项",
+    "questions": "问题",
+    "transcriptContent": "转录内容",
+    "importTranscript": "导入为会话",
+    "importing": "导入中...",
+    "deleteTranscript": "删除",
+    "clearAll": "清除全部",
+    "date": "日期",
+    "duration": "时长",
+    "participants": "参与者"
+  },
   "permission": {
     "permissionRequired": "需要权限",
     "tool": "工具：",

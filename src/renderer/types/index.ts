@@ -329,7 +329,12 @@ export type ClientEvent =
   | { type: 'folder.select'; payload: Record<string, never> }
   | { type: 'workdir.get'; payload: Record<string, never> }
   | { type: 'workdir.set'; payload: { path: string; sessionId?: string } }
-  | { type: 'workdir.select'; payload: { sessionId?: string; currentPath?: string } };
+  | { type: 'workdir.select'; payload: { sessionId?: string; currentPath?: string } }
+  | { type: 'fireflies.connect'; payload: { apiKey: string } }
+  | { type: 'fireflies.disconnect'; payload: Record<string, never> }
+  | { type: 'fireflies.fetchTranscripts'; payload: { apiKey: string; limit?: number; skip?: number } }
+  | { type: 'fireflies.importTranscript'; payload: { transcriptId: string } }
+  | { type: 'fireflies.deleteTranscript'; payload: { transcriptId: string } };
 
 // Sandbox setup types (app startup)
 export type SandboxSetupPhase =
@@ -398,6 +403,10 @@ export type ServerEvent =
   | { type: 'new-session' }
   | { type: 'navigate'; payload: string }
   | { type: 'scheduled-task.error'; payload: { taskId: string; error: string } }
+  | { type: 'fireflies.config'; payload: { apiKey: string; connected: boolean; lastSyncedAt: number | null } | null }
+  | { type: 'fireflies.transcripts'; payload: { transcripts: FirefliesTranscript[] } }
+  | { type: 'fireflies.transcriptDeleted'; payload: { transcriptId: string } }
+  | { type: 'fireflies.transcriptsCleared'; payload: Record<string, never> }
   | { type: 'error'; payload: { message: string; code?: 'CONFIG_REQUIRED_ACTIVE_SET'; action?: 'open_api_settings' } };
 
 // Settings types
@@ -608,4 +617,25 @@ export interface MCPToolInfo {
   description: string;
   serverId: string;
   serverName: string;
+}
+
+// Fireflies types
+export interface FirefliesConfig {
+  apiKey: string;
+  connected: boolean;
+  lastSyncedAt: number | null;
+}
+
+export interface FirefliesTranscript {
+  id: string;
+  title: string;
+  date: string;
+  duration: number;
+  participants: string[];
+  summary?: string;
+  actionItems?: string[];
+  questions?: string[];
+  transcriptText?: string;
+  sourceUrl?: string;
+  importedAt: number;
 }
