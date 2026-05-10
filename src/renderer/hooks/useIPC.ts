@@ -298,6 +298,18 @@ export function useIPC() {
           }
           break;
 
+        case 'project.list':
+          store.setProjects(event.payload.projects);
+          break;
+
+        case 'project.update':
+          store.updateProject(event.payload.projectId, event.payload.updates);
+          break;
+
+        case 'project.delete':
+          store.removeProject(event.payload.projectId);
+          break;
+
         default:
           console.log('[useIPC] Unknown server event:', event);
       }
@@ -320,6 +332,9 @@ export function useIPC() {
         const store = storeRef.current;
         store.setSystemDarkMode(Boolean(systemTheme?.shouldUseDarkColors));
         applyConfigSnapshot(config, Boolean(isConfigured));
+
+        // Load projects on startup
+        send({ type: 'project.list', payload: {} });
       } catch (error) {
         console.error('[useIPC] Failed to bootstrap config/theme state:', error);
       }
