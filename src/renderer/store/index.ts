@@ -12,6 +12,7 @@ import type {
   SkillsStorageChangeEvent,
   FirefliesConfig,
   FirefliesTranscript,
+  Project,
 } from '../types';
 import { applySessionUpdate } from '../utils/session-update';
 
@@ -97,6 +98,10 @@ interface AppState {
   firefliesConfig: FirefliesConfig | null;
   firefliesTranscripts: FirefliesTranscript[];
 
+  // Projects
+  projects: Project[];
+  activeProjectId: string | null;
+
   // Actions
   setSessions: (sessions: Session[]) => void;
   addSession: (session: Session) => void;
@@ -175,6 +180,14 @@ interface AppState {
   addFirefliesTranscript: (transcript: FirefliesTranscript) => void;
   removeFirefliesTranscript: (transcriptId: string) => void;
   clearFirefliesTranscripts: () => void;
+
+  // Project actions
+  setProjects: (projects: Project[]) => void;
+  addProject: (project: Project) => void;
+  updateProject: (projectId: string, updates: Partial<Project>) => void;
+  removeProject: (projectId: string) => void;
+  setActiveProjectId: (projectId: string | null) => void;
+  assignSessionToProject: (sessionId: string, projectId: string | null) => void;
 }
 
 const defaultSettings: Settings = {
@@ -242,6 +255,8 @@ export const useAppStore = create<AppState>((set) => ({
   systemDarkMode: false,
   firefliesConfig: null,
   firefliesTranscripts: [],
+  projects: [],
+  activeProjectId: null,
 
   // Session actions
   setSessions: (sessions) => set({ sessions }),
@@ -692,6 +707,38 @@ export const useAppStore = create<AppState>((set) => ({
       firefliesTranscripts: state.firefliesTranscripts.filter((t) => t.id !== transcriptId),
     })),
   clearFirefliesTranscripts: () => set({ firefliesTranscripts: [] }),
+
+  // Project actions
+  setProjects: (projects) => set({ projects }),
+
+  addProject: (project) =>
+    set((state) => ({
+      projects: [...state.projects, project],
+    })),
+
+  updateProject: (projectId, updates) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === projectId ? { ...p, ...updates } : p
+      ),
+    })),
+
+  removeProject: (projectId) =>
+    set((state) => ({
+      projects: state.projects.filter((p) => p.id !== projectId),
+      sessions: state.sessions.map((s) =>
+        s.projectId === projectId ? { ...s, projectId: undefined } : s
+      ),
+    })),
+
+  setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),
+
+  assignSessionToProject: (sessionId, projectId) =>
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId ? { ...s, projectId: projectId ?? undefined } : s
+      ),
+    })),
 }));
 
 // Expose helpers for nav-server (CLI-driven UI navigation via executeJavaScript)

@@ -10,6 +10,16 @@ export interface Session {
   allowedTools: string[];
   memoryEnabled: boolean;
   model?: string;
+  projectId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -330,6 +340,11 @@ export type ClientEvent =
   | { type: 'workdir.get'; payload: Record<string, never> }
   | { type: 'workdir.set'; payload: { path: string; sessionId?: string } }
   | { type: 'workdir.select'; payload: { sessionId?: string; currentPath?: string } }
+  | { type: 'project.create'; payload: { name: string; description?: string; color?: string } }
+  | { type: 'project.update'; payload: { projectId: string; updates: Partial<Project> } }
+  | { type: 'project.delete'; payload: { projectId: string } }
+  | { type: 'project.list'; payload: Record<string, never> }
+  | { type: 'project.assignSession'; payload: { sessionId: string; projectId: string | null } }
   | { type: 'fireflies.connect'; payload: { apiKey: string } }
   | { type: 'fireflies.disconnect'; payload: Record<string, never> }
   | { type: 'fireflies.fetchTranscripts'; payload: { apiKey: string; limit?: number; skip?: number } }
@@ -386,6 +401,9 @@ export type ServerEvent =
   | { type: 'session.status'; payload: { sessionId: string; status: SessionStatus; error?: string } }
   | { type: 'session.update'; payload: { sessionId: string; updates: Partial<Session> } }
   | { type: 'session.list'; payload: { sessions: Session[] } }
+  | { type: 'project.list'; payload: { projects: Project[] } }
+  | { type: 'project.update'; payload: { projectId: string; updates: Partial<Project> } }
+  | { type: 'project.delete'; payload: { projectId: string } }
   | { type: 'permission.request'; payload: PermissionRequest }
   | { type: 'permission.dismiss'; payload: { toolUseId: string } }
   | { type: 'sudo.password.request'; payload: SudoPasswordRequest }

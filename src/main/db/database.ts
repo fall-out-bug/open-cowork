@@ -59,6 +59,14 @@ export interface DatabaseInstance {
     deleteAll: () => void;
   };
 
+  projects: {
+    create: (project: ProjectRow) => void;
+    update: (id: string, updates: Partial<ProjectRow>) => void;
+    get: (id: string) => ProjectRow | undefined;
+    getAll: () => ProjectRow[];
+    delete: (id: string) => void;
+  };
+
   // For compatibility with old interface
   prepare: (sql: string) => Database.Statement;
   exec: (sql: string) => void;
@@ -77,6 +85,7 @@ export interface SessionRow {
   allowed_tools: string; // JSON string
   memory_enabled: number;
   model: string | null;
+  project_id: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -143,6 +152,15 @@ export interface FirefliesTranscriptRow {
   transcript_text: string | null;
   source_url: string | null;
   imported_at: number;
+}
+
+export interface ProjectRow {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  created_at: number;
+  updated_at: number;
 }
 
 let db: DatabaseInstance | null = null;
@@ -410,6 +428,30 @@ function initializeSchema(database: Database.Database): void {
     ON fireflies_transcripts(date DESC)
   `);
 
+  // Projects table
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
+
+  ensureColumn(database, 'sessions', 'project_id', 'project_id TEXT');
+
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_sessions_project_id
+    ON sessions(project_id)
+  `);
+
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_projects_name
+    ON projects(name)
+  `);
+
   log('[Database] Schema initialized');
   } catch (error) {
     logError('[Database] Schema initialization failed:', error);
@@ -466,8 +508,8 @@ export function initDatabase(): DatabaseInstance {
   // Prepare statements for better performance
   const insertSession = rawDb.prepare(`
     INSERT OR REPLACE INTO sessions
-    (id, title, claude_session_id, openai_thread_id, status, cwd, mounted_paths, allowed_tools, memory_enabled, model, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, title, claude_session_id, openai_thread_id, status, cwd, mounted_paths, allowed_tools, memory_enabled, model, project_id, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   
   // Note: Dynamic update queries are built in sessions.update() for flexibility
@@ -573,9 +615,26 @@ export function initDatabase(): DatabaseInstance {
     DELETE FROM fireflies_transcripts
   `);
 
+  const insertProject = rawDb.prepare(`
+    INSERT OR REPLACE INTO projects (id, name, description, color, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  const getProjectStmt = rawDb.prepare(`
+    SELECT * FROM projects WHERE id = ?
+  `);
+
+  const getAllProjectsStmt = rawDb.prepare(`
+    SELECT * FROM projects ORDER BY created_at ASC
+  `);
+
+  const deleteProjectStmt = rawDb.prepare(`
+    DELETE FROM projects WHERE id = ?
+  `);
+
   db = {
     raw: rawDb,
-    
+
     sessions: {
       create: (session: SessionRow) => {
         insertSession.run(
@@ -589,6 +648,7 @@ export function initDatabase(): DatabaseInstance {
           session.allowed_tools,
           session.memory_enabled,
           session.model,
+          session.project_id,
           session.created_at,
           session.updated_at
         );
@@ -807,6 +867,53 @@ export function initDatabase(): DatabaseInstance {
 
       deleteAll: () => {
         deleteAllFirefliesTranscriptsStmt.run();
+      },
+    },
+
+    projects: {
+      create: (project: ProjectRow) => {
+        insertProject.run(
+          project.id,
+          project.name,
+          project.description,
+          project.color,
+          project.created_at,
+          project.updated_at
+        );
+      },
+
+      update: (id: string, updates: Partial<ProjectRow>) => {
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+
+        for (const [key, value] of Object.entries(updates)) {
+          if (value !== undefined) {
+            validateIdentifier(key);
+            setClauses.push(`${key} = ?`);
+            values.push(value);
+          }
+        }
+
+        if (setClauses.length === 0) return;
+
+        setClauses.push('updated_at = ?');
+        values.push(Date.now());
+        values.push(id);
+
+        const sql = `UPDATE projects SET ${setClauses.join(', ')} WHERE id = ?`;
+        rawDb.prepare(sql).run(...values);
+      },
+
+      get: (id: string): ProjectRow | undefined => {
+        return getProjectStmt.get(id) as ProjectRow | undefined;
+      },
+
+      getAll: (): ProjectRow[] => {
+        return getAllProjectsStmt.all() as ProjectRow[];
+      },
+
+      delete: (id: string) => {
+        deleteProjectStmt.run(id);
       },
     },
 

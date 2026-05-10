@@ -276,6 +276,7 @@ export class SessionManager {
       allowed_tools: JSON.stringify(session.allowedTools),
       memory_enabled: session.memoryEnabled ? 1 : 0,
       model: session.model || null,
+      project_id: session.projectId || null,
       created_at: session.createdAt,
       updated_at: session.updatedAt,
     });
