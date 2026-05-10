@@ -335,6 +335,7 @@ export type ClientEvent =
   | { type: 'fireflies.fetchTranscripts'; payload: { apiKey: string; limit?: number; skip?: number } }
   | { type: 'fireflies.importTranscript'; payload: { transcriptId: string } }
   | { type: 'fireflies.deleteTranscript'; payload: { transcriptId: string } }
+  | { type: 'fireflies.searchTranscripts'; payload: { query: string } }
   | { type: 'fireflies.clearTranscripts'; payload: Record<string, never> };
 
 // Sandbox setup types (app startup)

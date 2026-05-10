@@ -191,6 +191,17 @@ export class FirefliesService {
     return transcripts;
   }
 
+  async searchTranscripts(query: string): Promise<FirefliesTranscript[]> {
+    const allTranscripts = this.loadTranscripts();
+    const lowerQuery = query.toLowerCase();
+    return allTranscripts.filter((t) =>
+      t.title.toLowerCase().includes(lowerQuery) ||
+      (t.summary?.toLowerCase().includes(lowerQuery) ?? false) ||
+      (t.transcriptText?.toLowerCase().includes(lowerQuery) ?? false) ||
+      t.participants.some((p) => p.toLowerCase().includes(lowerQuery))
+    );
+  }
+
   loadTranscripts(): FirefliesTranscript[] {
     const rows = this.db.firefliesTranscripts.getAll();
     return rows.map((row) => ({
