@@ -30,11 +30,7 @@ export function ProjectManager() {
   const projects = useAppStore((s) => s.projects);
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const sessions = useAppStore((s) => s.sessions);
-  const addProject = useAppStore((s) => s.addProject);
-  const updateProject = useAppStore((s) => s.updateProject);
-  const removeProject = useAppStore((s) => s.removeProject);
   const setActiveProjectId = useAppStore((s) => s.setActiveProjectId);
-  const assignSessionToProject = useAppStore((s) => s.assignSessionToProject);
   const { invoke } = useIPC();
 
   const [showCreate, setShowCreate] = useState(false);
@@ -58,7 +54,7 @@ export function ProjectManager() {
   const handleCreate = useCallback(async () => {
     if (!newName.trim()) return;
 
-    const project = await invoke<Project>({
+    await invoke<Project>({
       type: 'project.create',
       payload: {
         name: newName.trim(),
@@ -67,21 +63,17 @@ export function ProjectManager() {
       },
     });
 
-    if (project) {
-      addProject(project);
-    }
-
     setNewName('');
     setNewDescription('');
     setNewColor(PROJECT_COLORS[0]);
     setShowCreate(false);
-  }, [newName, newDescription, newColor, invoke, addProject]);
+  }, [newName, newDescription, newColor, invoke]);
 
   const handleUpdate = useCallback(
     async (projectId: string) => {
       if (!editName.trim()) return;
 
-      const updated = await invoke<Project>({
+      await invoke<Project>({
         type: 'project.update',
         payload: {
           projectId,
@@ -89,35 +81,22 @@ export function ProjectManager() {
         },
       });
 
-      if (updated) {
-        updateProject(projectId, { name: editName.trim() });
-      }
-
       setEditingId(null);
       setEditName('');
     },
-    [editName, invoke, updateProject]
+    [editName, invoke]
   );
 
   const handleDelete = useCallback(
     async (projectId: string) => {
-      const success = await invoke<boolean>({
+      await invoke<boolean>({
         type: 'project.delete',
         payload: { projectId },
       });
 
-      if (success) {
-        for (const session of sessions) {
-          if (session.projectId === projectId) {
-            assignSessionToProject(session.id, null);
-          }
-        }
-        removeProject(projectId);
-      }
-
       setMenuOpenId(null);
     },
-    [invoke, removeProject, sessions, assignSessionToProject]
+    [invoke]
   );
 
   const startEdit = useCallback((project: Project) => {
