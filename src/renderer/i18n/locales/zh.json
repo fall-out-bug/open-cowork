@@ -858,6 +858,17 @@
   "time": {
     "now": "刚刚"
   },
+  "projects": {
+    "title": "项目",
+    "allChats": "全部对话",
+    "newProject": "新建项目",
+    "createProject": "创建",
+    "editProject": "编辑",
+    "deleteProject": "删除",
+    "projectNamePlaceholder": "项目名称",
+    "projectDescriptionPlaceholder": "描述（可选）",
+    "noProjectsHint": "创建项目来组织你的对话"
+  },
   "permission": {
     "permissionRequired": "需要权限",
     "tool": "工具：",

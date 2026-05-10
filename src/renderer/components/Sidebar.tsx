@@ -16,6 +16,7 @@ import {
   Check,
 } from 'lucide-react';
 import type { Session } from '../types';
+import { ProjectManager } from './projects/ProjectManager';
 
 const sidebarLogoSrc = new URL('../../../resources/logo.png', import.meta.url).href;
 
@@ -33,6 +34,7 @@ export function Sidebar({ width = 280 }: SidebarProps) {
   const { t } = useTranslation();
   const sessions = useAppStore((s) => s.sessions);
   const activeSessionId = useAppStore((s) => s.activeSessionId);
+  const activeProjectId = useAppStore((s) => s.activeProjectId);
   const settings = useAppStore((s) => s.settings);
   const messagesBySession = useAppStore((s) => s.messagesBySession);
   const traceStepsBySession = useAppStore((s) => s.traceStepsBySession);
@@ -52,11 +54,20 @@ export function Sidebar({ width = 280 }: SidebarProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
+
+  // Filter sessions by active project
+  const projectFilteredSessions = useMemo(() => {
+    if (!activeProjectId) return sessions;
+    return sessions.filter((s) => s.projectId === activeProjectId);
+  }, [sessions, activeProjectId]);
+
   const filteredSessions = useMemo(() => {
-    return normalizedQuery
-      ? sessions.filter((session) => session.title.toLowerCase().includes(normalizedQuery))
-      : sessions;
-  }, [sessions, normalizedQuery]);
+    let result = projectFilteredSessions;
+    if (normalizedQuery) {
+      result = result.filter((session) => session.title.toLowerCase().includes(normalizedQuery));
+    }
+    return result;
+  }, [projectFilteredSessions, normalizedQuery]);
 
   const groupedSessions = useMemo(
     () => groupSessionsByDate(filteredSessions, t),
@@ -332,6 +343,11 @@ export function Sidebar({ width = 280 }: SidebarProps) {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Project Manager */}
+      <div className="px-3 pt-3 border-b border-border-muted">
+        <ProjectManager />
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-4">

@@ -10,6 +10,7 @@ import type {
   SandboxSetupProgress,
   SandboxSyncStatus,
   SkillsStorageChangeEvent,
+  Project,
 } from '../types';
 import { applySessionUpdate } from '../utils/session-update';
 
@@ -91,6 +92,10 @@ interface AppState {
   // System theme (from OS native theme)
   systemDarkMode: boolean;
 
+  // Projects
+  projects: Project[];
+  activeProjectId: string | null;
+
   // Actions
   setSessions: (sessions: Session[]) => void;
   addSession: (session: Session) => void;
@@ -162,6 +167,14 @@ interface AppState {
 
   // System theme actions
   setSystemDarkMode: (dark: boolean) => void;
+
+  // Project actions
+  setProjects: (projects: Project[]) => void;
+  addProject: (project: Project) => void;
+  updateProject: (projectId: string, updates: Partial<Project>) => void;
+  removeProject: (projectId: string) => void;
+  setActiveProjectId: (projectId: string | null) => void;
+  assignSessionToProject: (sessionId: string, projectId: string | null) => void;
 }
 
 const defaultSettings: Settings = {
@@ -227,6 +240,8 @@ export const useAppStore = create<AppState>((set) => ({
   skillsStorageChangeEvent: null,
   contextWindowBySession: {},
   systemDarkMode: false,
+  projects: [],
+  activeProjectId: null,
 
   // Session actions
   setSessions: (sessions) => set({ sessions }),
@@ -664,6 +679,38 @@ export const useAppStore = create<AppState>((set) => ({
 
   // System theme actions
   setSystemDarkMode: (dark) => set({ systemDarkMode: dark }),
+
+  // Project actions
+  setProjects: (projects) => set({ projects }),
+
+  addProject: (project) =>
+    set((state) => ({
+      projects: [...state.projects, project],
+    })),
+
+  updateProject: (projectId, updates) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === projectId ? { ...p, ...updates } : p
+      ),
+    })),
+
+  removeProject: (projectId) =>
+    set((state) => ({
+      projects: state.projects.filter((p) => p.id !== projectId),
+      sessions: state.sessions.map((s) =>
+        s.projectId === projectId ? { ...s, projectId: undefined } : s
+      ),
+    })),
+
+  setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),
+
+  assignSessionToProject: (sessionId, projectId) =>
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId ? { ...s, projectId: projectId ?? undefined } : s
+      ),
+    })),
 }));
 
 // Expose helpers for nav-server (CLI-driven UI navigation via executeJavaScript)

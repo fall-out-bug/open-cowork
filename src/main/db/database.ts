@@ -12,7 +12,7 @@ import { log, logError, logWarn } from '../utils/logger';
 export interface DatabaseInstance {
   // Raw database access (for advanced queries)
   raw: Database.Database;
-  
+
   // Session operations
   sessions: {
     create: (session: SessionRow) => void;
@@ -21,7 +21,7 @@ export interface DatabaseInstance {
     getAll: () => SessionRow[];
     delete: (id: string) => void;
   };
-  
+
   // Message operations
   messages: {
     create: (message: MessageRow) => void;
@@ -45,7 +45,15 @@ export interface DatabaseInstance {
     getAll: () => ScheduledTaskRow[];
     delete: (id: string) => void;
   };
-  
+
+  projects: {
+    create: (project: ProjectRow) => void;
+    update: (id: string, updates: Partial<ProjectRow>) => void;
+    get: (id: string) => ProjectRow | undefined;
+    getAll: () => ProjectRow[];
+    delete: (id: string) => void;
+  };
+
   // For compatibility with old interface
   prepare: (sql: string) => Database.Statement;
   exec: (sql: string) => void;
@@ -64,6 +72,16 @@ export interface SessionRow {
   allowed_tools: string; // JSON string
   memory_enabled: number;
   model: string | null;
+  project_id: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface ProjectRow {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -217,7 +235,7 @@ function initializeSchema(database: Database.Database): void {
   try {
   // Enable WAL mode for better performance
   database.pragma('journal_mode = WAL');
-  
+
   // Create sessions table
   database.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -237,7 +255,7 @@ function initializeSchema(database: Database.Database): void {
 
   ensureColumn(database, 'sessions', 'openai_thread_id', 'openai_thread_id TEXT');
   ensureColumn(database, 'sessions', 'model', 'model TEXT');
-  
+
   // Create messages table
   database.exec(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -271,15 +289,15 @@ function initializeSchema(database: Database.Database): void {
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     )
   `);
-  
+
   // Create index for faster message queries
   database.exec(`
-    CREATE INDEX IF NOT EXISTS idx_messages_session_id 
+    CREATE INDEX IF NOT EXISTS idx_messages_session_id
     ON messages(session_id)
   `);
-  
+
   database.exec(`
-    CREATE INDEX IF NOT EXISTS idx_messages_timestamp 
+    CREATE INDEX IF NOT EXISTS idx_messages_timestamp
     ON messages(session_id, timestamp)
   `);
 
@@ -292,7 +310,7 @@ function initializeSchema(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_trace_steps_timestamp
     ON trace_steps(session_id, timestamp)
   `);
-  
+
   // Create memory_entries table (for future use)
   database.exec(`
     CREATE TABLE IF NOT EXISTS memory_entries (
@@ -304,7 +322,7 @@ function initializeSchema(database: Database.Database): void {
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     )
   `);
-  
+
   // Create skills table (for future use)
   database.exec(`
     CREATE TABLE IF NOT EXISTS skills (
@@ -343,7 +361,31 @@ function initializeSchema(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_next_run
     ON scheduled_tasks(enabled, next_run_at)
   `);
-  
+
+  // Projects table
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
+
+  ensureColumn(database, 'sessions', 'project_id', 'project_id TEXT');
+
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_sessions_project_id
+    ON sessions(project_id)
+  `);
+
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_projects_name
+    ON projects(name)
+  `);
+
   log('[Database] Schema initialized');
   } catch (error) {
     logError('[Database] Schema initialization failed:', error);
@@ -379,7 +421,7 @@ function ensureColumn(
  */
 export function initDatabase(): DatabaseInstance {
   if (db) return db;
-  
+
   const dbPath = getDatabasePath();
   log('[Database] Opening database at:', dbPath);
 
@@ -393,51 +435,51 @@ export function initDatabase(): DatabaseInstance {
 
   // Enable foreign keys
   rawDb.pragma('foreign_keys = ON');
-  
+
   // Initialize schema
   initializeSchema(rawDb);
-  
+
   // Prepare statements for better performance
   const insertSession = rawDb.prepare(`
     INSERT OR REPLACE INTO sessions
-    (id, title, claude_session_id, openai_thread_id, status, cwd, mounted_paths, allowed_tools, memory_enabled, model, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, title, claude_session_id, openai_thread_id, status, cwd, mounted_paths, allowed_tools, memory_enabled, model, project_id, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  
+
   // Note: Dynamic update queries are built in sessions.update() for flexibility
   // const updateSessionStmt = rawDb.prepare(`
   //   UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?
   // `);
-  
+
   const getSessionStmt = rawDb.prepare(`
     SELECT * FROM sessions WHERE id = ?
   `);
-  
+
   const getAllSessionsStmt = rawDb.prepare(`
     SELECT * FROM sessions ORDER BY updated_at DESC
   `);
-  
+
   const deleteSessionStmt = rawDb.prepare(`
     DELETE FROM sessions WHERE id = ?
   `);
-  
+
   const insertMessage = rawDb.prepare(`
     INSERT INTO messages (id, session_id, role, content, timestamp, token_usage, execution_time_ms)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-  
+
   const getMessagesBySessionStmt = rawDb.prepare(`
     SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC
   `);
-  
+
   const updateMessageStmt = rawDb.prepare(`
     UPDATE messages SET execution_time_ms = ? WHERE id = ?
   `);
-  
+
   const deleteMessageStmt = rawDb.prepare(`
     DELETE FROM messages WHERE id = ?
   `);
-  
+
   const deleteMessagesBySessionStmt = rawDb.prepare(`
     DELETE FROM messages WHERE session_id = ?
   `);
@@ -475,10 +517,27 @@ export function initDatabase(): DatabaseInstance {
   const deleteScheduledTaskStmt = rawDb.prepare(`
     DELETE FROM scheduled_tasks WHERE id = ?
   `);
-  
+
+  const insertProject = rawDb.prepare(`
+    INSERT OR REPLACE INTO projects (id, name, description, color, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  const getProjectStmt = rawDb.prepare(`
+    SELECT * FROM projects WHERE id = ?
+  `);
+
+  const getAllProjectsStmt = rawDb.prepare(`
+    SELECT * FROM projects ORDER BY created_at ASC
+  `);
+
+  const deleteProjectStmt = rawDb.prepare(`
+    DELETE FROM projects WHERE id = ?
+  `);
+
   db = {
     raw: rawDb,
-    
+
     sessions: {
       create: (session: SessionRow) => {
         insertSession.run(
@@ -492,11 +551,12 @@ export function initDatabase(): DatabaseInstance {
           session.allowed_tools,
           session.memory_enabled,
           session.model,
+          session.project_id,
           session.created_at,
           session.updated_at
         );
       },
-      
+
       update: (id: string, updates: Partial<SessionRow>) => {
         // Build dynamic update query
         const setClauses: string[] = [];
@@ -520,21 +580,21 @@ export function initDatabase(): DatabaseInstance {
         const sql = `UPDATE sessions SET ${setClauses.join(', ')} WHERE id = ?`;
         rawDb.prepare(sql).run(...values);
       },
-      
+
       get: (id: string): SessionRow | undefined => {
         return getSessionStmt.get(id) as SessionRow | undefined;
       },
-      
+
       getAll: (): SessionRow[] => {
         return getAllSessionsStmt.all() as SessionRow[];
       },
-      
+
       delete: (id: string) => {
         // Messages will be deleted automatically due to ON DELETE CASCADE
         deleteSessionStmt.run(id);
       },
     },
-    
+
     messages: {
       create: (message: MessageRow) => {
         insertMessage.run(
@@ -547,21 +607,21 @@ export function initDatabase(): DatabaseInstance {
           message.execution_time_ms ?? null
         );
       },
-      
+
       update: (id: string, updates: Partial<Pick<MessageRow, 'execution_time_ms'>>) => {
         if (updates.execution_time_ms !== undefined) {
           updateMessageStmt.run(updates.execution_time_ms, id);
         }
       },
-      
+
       getBySessionId: (sessionId: string): MessageRow[] => {
         return getMessagesBySessionStmt.all(sessionId) as MessageRow[];
       },
-      
+
       delete: (id: string) => {
         deleteMessageStmt.run(id);
       },
-      
+
       deleteBySessionId: (sessionId: string) => {
         deleteMessagesBySessionStmt.run(sessionId);
       },
@@ -668,7 +728,56 @@ export function initDatabase(): DatabaseInstance {
         deleteScheduledTaskStmt.run(id);
       },
     },
-    
+
+    projects: {
+      create: (project: ProjectRow) => {
+        insertProject.run(
+          project.id,
+          project.name,
+          project.description,
+          project.color,
+          project.created_at,
+          project.updated_at
+        );
+      },
+
+      update: (id: string, updates: Partial<ProjectRow>) => {
+        const setClauses: string[] = [];
+        const values: unknown[] = [];
+
+        for (const [key, value] of Object.entries(updates)) {
+          if (value !== undefined) {
+            validateIdentifier(key);
+            setClauses.push(`${key} = ?`);
+            values.push(value);
+          }
+        }
+
+        if (setClauses.length === 0) return;
+
+        setClauses.push('updated_at = ?');
+        values.push(Date.now());
+        values.push(id);
+
+        const sql = `UPDATE projects SET ${setClauses.join(', ')} WHERE id = ?`;
+        rawDb.prepare(sql).run(...values);
+      },
+
+      get: (id: string): ProjectRow | undefined => {
+        return getProjectStmt.get(id) as ProjectRow | undefined;
+      },
+
+      getAll: (): ProjectRow[] => {
+        return getAllProjectsStmt.all() as ProjectRow[];
+      },
+
+      delete: (id: string) => {
+        // Unassign sessions from this project before deleting
+        rawDb.prepare(`UPDATE sessions SET project_id = NULL WHERE project_id = ?`).run(id);
+        deleteProjectStmt.run(id);
+      },
+    },
+
     // Compatibility layer for old interface
     prepare: (sql: string) => rawDb.prepare(sql),
     exec: (sql: string) => rawDb.exec(sql),
@@ -678,7 +787,7 @@ export function initDatabase(): DatabaseInstance {
       db = null;
     },
   };
-  
+
   log('[Database] SQLite database initialized successfully');
   return db!;
 }

@@ -858,6 +858,17 @@
   "time": {
     "now": "now"
   },
+  "projects": {
+    "title": "Projects",
+    "allChats": "All chats",
+    "newProject": "New project",
+    "createProject": "Create",
+    "editProject": "Edit",
+    "deleteProject": "Delete",
+    "projectNamePlaceholder": "Project name",
+    "projectDescriptionPlaceholder": "Description (optional)",
+    "noProjectsHint": "Create a project to organize your chats"
+  },
   "permission": {
     "permissionRequired": "Permission Required",
     "tool": "Tool:",

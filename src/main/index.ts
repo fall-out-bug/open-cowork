@@ -19,6 +19,7 @@ import { execFileSync } from 'child_process';
 import { config } from 'dotenv';
 import { initDatabase } from './db/database';
 import { SessionManager } from './session/session-manager';
+import { ProjectManager } from './projects/project-manager';
 import { SkillsManager } from './skills/skills-manager';
 import { PluginCatalogService } from './skills/plugin-catalog-service';
 import { PluginRuntimeService } from './skills/plugin-runtime-service';
@@ -108,6 +109,7 @@ app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | null = null;
 let sessionManager: SessionManager | null = null;
+let projectManager: ProjectManager | null = null;
 let skillsManager: SkillsManager | null = null;
 let pluginRuntimeService: PluginRuntimeService | null = null;
 let scheduledTaskManager: ScheduledTaskManager | null = null;
@@ -794,6 +796,7 @@ app
     // Initialize session manager before creating an interactive window.
     // This avoids session.start racing the startup path and hitting a null manager.
     sessionManager = new SessionManager(db, sendToRenderer, pluginRuntimeService);
+    projectManager = new ProjectManager(db, sendToRenderer);
     skillsManager = new SkillsManager(db, {
       getConfiguredGlobalSkillsPath: () => configStore.get('globalSkillsPath') || '',
       setConfiguredGlobalSkillsPath: (nextPath: string) => {
@@ -2669,6 +2672,43 @@ async function handleClientEvent(event: ClientEvent): Promise<unknown> {
         });
       }
       return null;
+
+    case 'project.create': {
+      if (!projectManager) throw new Error('Project manager not initialized');
+      const project = projectManager.createProject(
+        event.payload.name,
+        event.payload.description,
+        event.payload.color
+      );
+      sendToRenderer({ type: 'project.list', payload: { projects: projectManager.listProjects() } });
+      return project;
+    }
+
+    case 'project.update': {
+      if (!projectManager) throw new Error('Project manager not initialized');
+      return projectManager.updateProject(event.payload.projectId, event.payload.updates);
+    }
+
+    case 'project.delete': {
+      if (!projectManager) throw new Error('Project manager not initialized');
+      const success = projectManager.deleteProject(event.payload.projectId);
+      if (success) {
+        sendToRenderer({ type: 'project.list', payload: { projects: projectManager.listProjects() } });
+      }
+      return success;
+    }
+
+    case 'project.list': {
+      if (!projectManager) throw new Error('Project manager not initialized');
+      const projects = projectManager.listProjects();
+      sendToRenderer({ type: 'project.list', payload: { projects } });
+      return projects;
+    }
+
+    case 'project.assignSession': {
+      if (!projectManager) throw new Error('Project manager not initialized');
+      return projectManager.assignSessionToProject(event.payload.sessionId, event.payload.projectId);
+    }
 
     default:
       logWarn('Unknown event type:', event);
