@@ -99,6 +99,25 @@ export function ProjectManager() {
     [invoke]
   );
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDropOnProject = useCallback(
+    async (e: React.DragEvent, projectId: string | null) => {
+      e.preventDefault();
+      const sessionId = e.dataTransfer.getData('sessionId');
+      if (!sessionId) return;
+
+      await invoke({
+        type: 'project.assignSession',
+        payload: { sessionId, projectId },
+      });
+    },
+    [invoke]
+  );
+
   const startEdit = useCallback((project: Project) => {
     setEditingId(project.id);
     setEditName(project.name);
@@ -175,6 +194,8 @@ export function ProjectManager() {
         {/* All chats */}
         <button
           onClick={() => setActiveProjectId(null)}
+          onDragOver={handleDragOver}
+          onDrop={(e) => handleDropOnProject(e, null)}
           className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
             activeProjectId === null
               ? 'bg-accent-muted/20 text-accent'
@@ -197,6 +218,8 @@ export function ProjectManager() {
           return (
             <div
               key={project.id}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDropOnProject(e, project.id)}
               className={`group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-colors ${
                 isActive
                   ? 'bg-accent-muted/20'

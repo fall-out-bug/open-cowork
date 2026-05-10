@@ -56,12 +56,18 @@ export function Sidebar({ width = 280 }: SidebarProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activePanel, setActivePanel] = useState<'sessions' | 'projects' | 'fireflies'>('sessions');
 
+  const activeProjectId = useAppStore((s) => s.activeProjectId);
+
   const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
   const filteredSessions = useMemo(() => {
-    return normalizedQuery
+    let result = normalizedQuery
       ? sessions.filter((session) => session.title.toLowerCase().includes(normalizedQuery))
       : sessions;
-  }, [sessions, normalizedQuery]);
+    if (activeProjectId) {
+      result = result.filter((s) => s.projectId === activeProjectId);
+    }
+    return result;
+  }, [sessions, normalizedQuery, activeProjectId]);
 
   const groupedSessions = useMemo(
     () => groupSessionsByDate(filteredSessions, t),
@@ -195,6 +201,11 @@ export function Sidebar({ width = 280 }: SidebarProps) {
       traceStepsBySession,
     ]
   );
+
+  const handleSessionDragStart = useCallback((e: React.DragEvent, sessionId: string) => {
+    e.dataTransfer.setData('sessionId', sessionId);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
 
   const handleNewSession = () => {
     setActiveSession(null);
@@ -402,6 +413,8 @@ export function Sidebar({ width = 280 }: SidebarProps) {
                         return (
                           <div
                             key={session.id}
+                            draggable={!isSelectMode}
+                            onDragStart={(e) => handleSessionDragStart(e, session.id)}
                             onClick={() => {
                               if (isSelectMode) {
                                 toggleSelectSession(session.id);
